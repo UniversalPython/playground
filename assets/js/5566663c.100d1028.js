@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkuniversal_py_docs=self.webpackChunkuniversal_py_docs||[]).push([[3432],{5929:s=>{s.exports=JSON.parse('{"label":"docusaurus","permalink":"/playground/blog/tags/docusaurus","allTagsPath":"/playground/blog/tags","count":4}')}}]);
