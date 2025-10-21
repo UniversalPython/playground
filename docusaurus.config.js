@@ -76,10 +76,10 @@ const config = {
         },
         items: [
           {
-            type: 'doc',
+            href: 'https://universalpython.github.io/',
             docId: 'intro',
             position: 'left',
-            label: 'Tutorial',
+            label: 'Docs',
           },
           // {to: '/blog', label: 'Blog', position: 'left'},
           {
@@ -106,7 +106,7 @@ const config = {
             items: [
               {
                 label: 'Tutorial',
-                to: '/docs/intro',
+                href: 'https://universalpython.github.io/',
               },
             ],
           },
@@ -117,15 +117,15 @@ const config = {
                 label: 'GitHub Discussions',
                 href: 'https://github.com/UniversalPython/UniversalPython/issues',
               },
+              {
+                label: 'Discord',
+                href: 'https://discord.gg/CD3Dh6zcfE',
+              },
             ],
           },
           {
             title: 'More',
             items: [
-              // {
-              //   label: 'Blog',
-              //   to: '/blog',
-              // },
               {
                 label: 'GitHub',
                 href: 'https://github.com/UniversalPython/UniversalPython',
