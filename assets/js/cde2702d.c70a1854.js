@@ -1,0 +1,1 @@
+"use strict";(globalThis.webpackChunkuniversal_py_docs=globalThis.webpackChunkuniversal_py_docs||[]).push([[7332],{350:l=>{l.exports=JSON.parse('{"label":"hello","permalink":"/playground/blog/tags/hello","allTagsPath":"/playground/blog/tags","count":2}')}}]);
