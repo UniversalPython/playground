@@ -1,1 +1,0 @@
-"use strict";(globalThis.webpackChunkuniversal_py_docs=globalThis.webpackChunkuniversal_py_docs||[]).push([[8283],{2191:o=>{o.exports=JSON.parse('{"permalink":"/playground/blog/tags/facebook","page":1,"postsPerPage":10,"totalPages":1,"totalCount":1,"blogDescription":"Blog","blogTitle":"Blog"}')}}]);
