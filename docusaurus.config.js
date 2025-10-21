@@ -9,8 +9,8 @@ const config = {
   title: 'UniversalPython',
   tagline: 'An inclusive transpiler which lets you write Python code in any human language.',
   url: 'https://universalpython.github.io',
-  baseUrl: '/',
-    onBrokenLinks: 'throw',
+  baseUrl: '/playground/',
+  onBrokenLinks: 'throw',
   onBrokenMarkdownLinks: 'warn',
   favicon: 'img/favicon.ico',
 
