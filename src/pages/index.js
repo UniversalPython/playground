@@ -15,6 +15,9 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShareIcon from '@mui/icons-material/Share';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import StopIcon from '@mui/icons-material/Stop';
+import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 
 // Constants
 const PYPI_PROJECT = 'universalpython';
@@ -311,6 +314,13 @@ export default function Home() {
   const [copySnack, setCopySnack] = useState({ open: false, msg: '', anchorOrigin: {} });
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareUrlValue, setShareUrlValue] = useState('');
+
+  // --- TTS state & refs ---
+  const [voices, setVoices] = useState([]);
+  const [ttsSupported, setTtsSupported] = useState(false);
+  const currentUtteranceRef = useRef(null);
+  const [isSpeakingLeft, setIsSpeakingLeft] = useState(false);
+  const [isSpeakingRight, setIsSpeakingRight] = useState(false);
 
   // read query params on load
   useEffect(() => {
@@ -652,6 +662,117 @@ if data_el is not None:
     }
   };
 
+  // -----------------------
+  // TTS: load voices & helpers
+  // -----------------------
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const synth = window.speechSynthesis;
+    if (!synth) {
+      setTtsSupported(false);
+      return;
+    }
+    setTtsSupported(true);
+
+    const loadVoices = () => {
+      const v = synth.getVoices();
+      setVoices(v || []);
+    };
+    loadVoices();
+    // Some browsers fire 'voiceschanged' after async loading
+    synth.addEventListener('voiceschanged', loadVoices);
+    return () => {
+      synth.removeEventListener('voiceschanged', loadVoices);
+      try { synth.cancel(); } catch (e) {}
+    };
+  }, []);
+
+  const pickVoiceForLang = (langCode2) => {
+    if (!voices || voices.length === 0) return null;
+    if (!langCode2) return voices[0] || null;
+    const lc = String(langCode2).toLowerCase();
+    // Prefer exact prefix match like 'ur', 'hi', 'fr'
+    const exact = voices.find(v => v.lang && v.lang.toLowerCase().startsWith(lc));
+    if (exact) return exact;
+    // fallback: any voice whose lang contains the code
+    const contains = voices.find(v => v.lang && v.lang.toLowerCase().includes(lc));
+    if (contains) return contains;
+    // fallback: first voice that is not empty
+    return voices.find(v => v.lang) || voices[0] || null;
+  };
+
+  const speakTextWithLang = (text, langCode2, onStart, onEnd) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+      // not supported
+      onEnd && onEnd();
+      return;
+    }
+    // stop currently playing utterance
+    try {
+      window.speechSynthesis.cancel();
+    } catch (e) {}
+    if (!text || !text.trim()) {
+      onEnd && onEnd();
+      return;
+    }
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate = 0.95; // slightly slower by default for code readability
+    const voice = pickVoiceForLang(langCode2);
+    if (voice) utter.voice = voice;
+    // If the language object has direction rtl, some browsers may need specific language codes;
+    // we still rely on voice.lang selection above.
+    utter.onstart = () => { currentUtteranceRef.current = utter; onStart && onStart(); };
+    utter.onend = () => { currentUtteranceRef.current = null; onEnd && onEnd(); };
+    utter.onerror = () => { currentUtteranceRef.current = null; onEnd && onEnd(); };
+    window.speechSynthesis.speak(utter);
+  };
+
+  const stopSpeaking = () => {
+    try {
+      if (window && window.speechSynthesis) window.speechSynthesis.cancel();
+    } catch (e) { /* ignore */ }
+    currentUtteranceRef.current = null;
+    setIsSpeakingLeft(false);
+    setIsSpeakingRight(false);
+  };
+
+  const handleSpeakLeft = () => {
+    if (!ttsSupported) return;
+    if (isSpeakingLeft) {
+      stopSpeaking();
+      return;
+    }
+    setIsSpeakingLeft(true);
+    // speak editorCode in sourceLanguage.code2
+    speakTextWithLang(
+      editorCode,
+      sourceLanguage?.code2,
+      () => setIsSpeakingLeft(true),
+      () => setIsSpeakingLeft(false)
+    );
+  };
+
+  const handleSpeakRight = () => {
+    if (!ttsSupported) return;
+    if (isSpeakingRight) {
+      stopSpeaking();
+      return;
+    }
+    setIsSpeakingRight(true);
+    // speak translatedCode in targetLanguage.code2
+    speakTextWithLang(
+      translatedCode || '',
+      targetLanguage?.code2,
+      () => setIsSpeakingRight(true),
+      () => setIsSpeakingRight(false)
+    );
+  };
+
+  // Stop on unmount
+  useEffect(() => {
+    return () => { try { if (window && window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {} };
+  }, []);
+
   return (
     <Layout title={`${siteConfig.title} | Programming for everyone`} description="Write Python in any human language. Can't find yours? Easily contribute.">
       <Head>
@@ -707,13 +828,34 @@ if data_el is not None:
                     sx={{
                       position: 'absolute',
                       top: 8,
-                      right: 8,
+                      right: 56,
                       zIndex: 30,
                       boxShadow: 1,
                     }}
                   >
                     <ContentCopyIcon fontSize="small" />
                   </IconButton>
+                </Tooltip>
+
+                {/* TTS button for left editor */}
+                <Tooltip title={ttsSupported ? `Speak (in ${sourceLanguage?.name})` : 'Speech not supported by this browser'}>
+                  <span>
+                    <IconButton
+                      onClick={handleSpeakLeft}
+                      size="small"
+                      aria-label="Speak original code"
+                      disabled={!ttsSupported}
+                      sx={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        zIndex: 30,
+                        boxShadow: 1,
+                      }}
+                    >
+                      {isSpeakingLeft ? <StopIcon fontSize="small" /> : <PlayArrowIcon fontSize="small" />}
+                    </IconButton>
+                  </span>
                 </Tooltip>
 
               <div style={{ position: 'relative', direction: sourceLanguage?.direction || 'ltr' }} direction={sourceLanguage?.direction || 'ltr'}>
@@ -739,13 +881,34 @@ if data_el is not None:
                     sx={{
                       position: 'absolute',
                       top: 8,
-                      right: 8,
+                      right: 56,
                       zIndex: 40,
                       boxShadow: 1,
                     }}
                   >
                     <ContentCopyIcon fontSize="small" />
                   </IconButton>
+                </Tooltip>
+
+                {/* TTS button for right editor */}
+                <Tooltip title={ttsSupported ? `Speak (in ${targetLanguage?.name})` : 'Speech not supported by this browser'}>
+                  <span>
+                    <IconButton
+                      onClick={handleSpeakRight}
+                      size="small"
+                      aria-label="Speak translated code"
+                      disabled={!ttsSupported}
+                      sx={{
+                        position: 'absolute',
+                        top: 8,
+                        right: 8,
+                        zIndex: 40,
+                        boxShadow: 1,
+                      }}
+                    >
+                      {isSpeakingRight ? <StopIcon fontSize="small" /> : <PlayArrowIcon fontSize="small" />}
+                    </IconButton>
+                  </span>
                 </Tooltip>
 
                 {/* Right-hand editor: real CodeMirror, readOnly. We render an overlay to catch interactions and show snackbar */}
