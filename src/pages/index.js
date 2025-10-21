@@ -15,7 +15,6 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShareIcon from '@mui/icons-material/Share';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import StopIcon from '@mui/icons-material/Stop';
 import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 
@@ -979,10 +978,26 @@ if data_el is not None:
   );
 }
 
-
-
 const MaterialThemeWrapper = ({ children }) => {
-  const { colorMode } = useColorMode(); const isDarkTheme = colorMode === 'dark';
+  const { colorMode } = useColorMode();
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  
+  const isDarkTheme = colorMode === 'dark';
   const theme = React.useMemo(() => createTheme({ palette: { mode: isDarkTheme ? 'dark' : 'light' } }), [isDarkTheme]);
-  return <ThemeProvider theme={theme}><CssBaseline />{children}</ThemeProvider>;
+  
+  // Don't render children until mounted on client to avoid hydration mismatch
+  if (!mounted) {
+    return null;
+  }
+  
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      {children}
+    </ThemeProvider>
+  );
 };
