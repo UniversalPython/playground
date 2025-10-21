@@ -853,7 +853,7 @@ if data_el is not None:
                         boxShadow: 1,
                       }}
                     >
-                      {isSpeakingLeft ? <StopIcon fontSize="small" /> : <PlayArrowIcon fontSize="small" />}
+                      {isSpeakingLeft ? <StopIcon fontSize="small" /> : <VolumeUpIcon fontSize="small" />}
                     </IconButton>
                   </span>
                 </Tooltip>
@@ -906,7 +906,7 @@ if data_el is not None:
                         boxShadow: 1,
                       }}
                     >
-                      {isSpeakingRight ? <StopIcon fontSize="small" /> : <PlayArrowIcon fontSize="small" />}
+                      {isSpeakingRight ? <StopIcon fontSize="small" /> : <VolumeUpIcon fontSize="small" />}
                     </IconButton>
                   </span>
                 </Tooltip>
