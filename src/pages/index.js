@@ -22,13 +22,117 @@ const PYPI_JSON = `https://pypi.org/pypi/${PYPI_PROJECT}/json`;
 export const defaultLightThemeOption = EditorView.theme({ '&': { backgroundColor: 'whitesmoke' } }, { dark: false });
 import styles from './index.module.css';
 
-// languages (kept short here; extend as needed)
+// Array of Languages on right side of code editor
 const languages = [
-  { id: 'EN', code3: 'eng', code2: 'en', name: 'English', i18nName: 'English', fontFamily: "Hack, 'Courier New', monospace" },
-  { id: 'HI', default: true, code3: 'hin', code2: 'hi', name: 'Hindi', i18nName: 'Hindi', fontFamily: "Hack, 'Courier New', monospace" },
-  { id: 'UR', code3: 'urd', code2: 'ur', name: 'Urdu', i18nName: 'اردو', direction: 'rtl', fontFamily: "Hack, 'Courier New', monospace" },
-  { id: 'FR', code3: 'fra', code2: 'fr', name: 'French', i18nName: 'Français', fontFamily: "Hack, 'Courier New', monospace" },
-];
+  {
+    id: "CS",
+    code3: "ces",
+    code2: "cs",
+    name: "Czech",
+    i18nName: "Čeština",
+    fontFamily: "'Roboto Mono'",
+    toEnglishDict: "'languages/cs/default.yaml'",
+  },
+  {
+    id: "DE",
+    code3: "deu",
+    code2: "de",
+    name: "German",
+    i18nName: "Deutsch",
+    fontFamily: "'Roboto Mono'",
+    toEnglishDict: "'languages/de/default.yaml'",
+  },
+  {
+    id: "UR",
+    code3: "urd",
+    code2: "ur",
+    name: "Urdu",
+    i18nName: "اردو",
+    direction: "rtl",
+    fontFamily: "'Roboto Mono'",
+    toEnglishDict: "'languages/ur/default.yaml'",
+    fontWeights: "bold",
+    style: {
+      direction: "rtl"
+    }
+  },
+  {
+    id: "HI",
+    default: true,
+    code3: "hin",
+    code2: "hi",
+    name: "Hindi",
+    i18nName: "Hindi",
+    fontFamily: "'Roboto Mono'",
+    toEnglishDict: "'languages/hi/default.yaml'",
+  },
+  {
+    id: "EN",
+    code3: "eng",
+    code2: "en",
+    name: "English",
+    i18nName: "English",
+    fontFamily: "'Roboto Mono'",
+  },
+  {
+    id: "GA",
+    code3: "gle",
+    code2: "ga",
+    name: "Irish",
+    i18nName: "Gaeilge",
+    fontFamily: "'Roboto Mono'",
+    toEnglishDict: "'languages/ga/default.yaml'",
+  },
+  {
+    id: "KO",
+    code3: "kor",
+    code2: "ko",
+    name: "Korean",
+    i18nName: "한국어",
+    fontFamily: "'Roboto Mono'",
+    toEnglishDict: "'languages/ko/default.yaml'",
+  },
+  {
+    id: "FR",
+    code3: "fra",
+    code2: "fr",
+    name: "French",
+    i18nName: "Français",
+    fontFamily: "'Roboto Mono'",
+    toEnglishDict: "'languages/fr/default.yaml'",
+  },
+  {
+    id: "TR",
+    code3: "tur",
+    code2: "tr",
+    name: "Turkish",
+    i18nName: "Türkçe",
+    fontFamily: "'Roboto Mono'",
+    toEnglishDict: "'languages/tr/default.yaml'",
+  },
+  {
+    id: "HU",
+    code3: "hun",
+    code2: "hu",
+    name: "Hungarian",
+    i18nName: "Magyar",
+    fontFamily: "'Roboto Mono'",
+    toEnglishDict: "'languages/hu/default.yaml'",
+  },
+  // Added Emoji
+  {
+    id: "EMOJI",
+    code3: "emo",
+    code2: "emoji",
+    name: "The Emoji Language",
+    i18nName: "😀😃😄😁😆",
+    fontFamily: "'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif",
+    toEnglishDict: "'languages/emoji/default.yaml'",
+    style: {
+      fontSize: "1.2em"
+    }
+  },
+]
 
 const initialCodes = [
   { id: 'hello_world', name: ' Simple Hello World', en: `print("Hello world!")` },
@@ -177,23 +281,34 @@ export default function Home() {
   const isBrowser = useIsBrowser();
   const { country } = useGeoLocation();
 
+  // States
   const [editorCode, setEditorCode] = useState(initialCodes[0].en);
   const [code, setCode] = useState(initialCodes[0].en);
   const [translatedCode, setTranslatedCode] = useState('');
   const [isWaitingForCode, setIsWaitingForCode] = useState(false);
   const [isDetected, setIsDetected] = useState(false);
-  const [sourceLanguage, setSourceLanguage] = useState(languages.find(l => l.code2 === 'en'));
-  const [targetLanguage, setTargetLanguage] = useState(languages.find(l => l.default));
+
+  // find Urdu by code2 'ur' (you asked for 'ur' key)
+  const urduLang = languages.find(l => l.code2 === 'ur') || languages.find(l => l.id === 'UR');
+  const defaultSource = languages.find(l => l.code2 === 'en') || languages.find(l => l.id === 'EN');
+
+  // track whether the user manually changed the target language (Option A)
+  const userManuallySelectedTarget = useRef(false);
+  // track if auto-detection has already run once
+  const autoDetectDone = useRef(false);
+  // track if URL had a tgt param on load
+  const [urlHasTgt, setUrlHasTgt] = useState(false);
+
+  const [sourceLanguage, setSourceLanguage] = useState(defaultSource);
+  // default target is Urdu per your request
+  const [targetLanguage, setTargetLanguage] = useState(urduLang || languages.find(l => l.default));
+
   const [loadingPyscript, setLoadingPyscript] = useState(true);
   const [wheelUrl, setWheelUrl] = useState(null);
 
-  // existing read-only snackbar (when overlay clicked)
+  // existing snackbars / dialogs
   const [snackOpen, setSnackOpen] = useState(false);
-
-  // snackbar for copy confirmations
   const [copySnack, setCopySnack] = useState({ open: false, msg: '', anchorOrigin: {} });
-
-  // share dialog state (fallback)
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareUrlValue, setShareUrlValue] = useState('');
 
@@ -213,6 +328,9 @@ export default function Home() {
     if (tgt) {
       const found = languages.find(l => l.code2 === tgt || l.id === tgt);
       if (found) setTargetLanguage(found);
+      setUrlHasTgt(true); // mark that URL override exists
+      // treat URL param as an explicit manual selection
+      userManuallySelectedTarget.current = true;
     }
   }, [isBrowser]);
 
@@ -242,8 +360,16 @@ export default function Home() {
     return () => clearTimeout(t);
   }, [editorCode]);
 
-  // swap languages & swap editor text by swapping React state (fixes your issue)
+  // Helper: mark that user manually selected target (blocks future auto-detect)
+  const markUserManualTarget = (alsoClearDetected = false) => {
+    userManuallySelectedTarget.current = true;
+    if (alsoClearDetected) setIsDetected(false);
+  };
+
+  // swap languages & swap editor text by swapping React state (user action -> manual selection)
   const swapLanguages = () => {
+    // mark manual because the user clicked swap
+    markUserManualTarget();
     // swap language objects
     setSourceLanguage(prevSource => { const oldSource = prevSource; setTargetLanguage(oldSource); return targetLanguage; });
     // swap code content between editor and translated output (we maintain code as the source text)
@@ -340,6 +466,98 @@ if data_el is not None:
     return () => observer.disconnect();
   }, [isBrowser]);
 
+  // ---------- AUTO-DETECT LOGIC (Option A: only on first load) ----------
+  // Hook: browser language detection (first-tier after URL param)
+  useEffect(() => {
+    if (!isBrowser) return;
+    if (autoDetectDone.current) return;
+    if (urlHasTgt) {
+      autoDetectDone.current = true;
+      return;
+    }
+    if (userManuallySelectedTarget.current) {
+      autoDetectDone.current = true;
+      return;
+    }
+
+    // Try navigator language first (but ignore English)
+    try {
+      const userLang = navigator.language || navigator.userLanguage || '';
+      const _languageCode = (userLang || '').split('-')[0].toLowerCase();
+      if (_languageCode && _languageCode !== 'en') {
+        const idx = languages.findIndex(l => l.code2 === _languageCode);
+        if (idx > -1) {
+          setTargetLanguage(languages[idx]);
+          setIsDetected(true);
+          autoDetectDone.current = true;
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('browser language detection failed', e);
+    }
+    // If browser didn't produce a non-English match, defer to country-based detection below
+  }, [isBrowser, urlHasTgt]);
+
+  // Hook: country (IP) -> restcountries lookup as a fallback after browser language
+  useEffect(() => {
+    if (!isBrowser) return;
+    if (autoDetectDone.current) return;
+    if (urlHasTgt) { autoDetectDone.current = true; return; }
+    if (userManuallySelectedTarget.current) { autoDetectDone.current = true; return; }
+    if (!country) return; // wait until react-ipgeolocation provides country code
+
+    // Use restcountries to find languages for the alpha country code
+    (async () => {
+      try {
+        const res = await fetch(`https://restcountries.com/v3.1/alpha/${country}`);
+        if (!res.ok) throw new Error('restcountries fetch failed');
+        const result = await res.json();
+        if (!Array.isArray(result) || result.length === 0) {
+          throw new Error('restcountries returned no data');
+        }
+        // `languages` is an object with keys like "eng","urd" or sometimes ISO 639-1 like "en","ur".
+        const countryLangsObj = result[0].languages || {};
+        const countryLangCodes = Object.keys(countryLangsObj || {}); // keys might be 'urd','eng' or 'ur','en' etc.
+
+        // Attempt to find a supported language by matching code2 or code3, while skipping English
+        let foundLang = null;
+        for (const c of countryLangCodes) {
+          if (!c) continue;
+          const keyLower = String(c).toLowerCase();
+          if (keyLower === 'eng' || keyLower === 'en') continue; // skip English
+
+          // check code2 match first (e.g., 'ur')
+          const byCode2 = languages.find(l => l.code2 && l.code2.toLowerCase() === keyLower);
+          if (byCode2) { foundLang = byCode2; break; }
+          // then check code3 match (e.g., 'urd' or 'fra')
+          const byCode3 = languages.find(l => l.code3 && l.code3.toLowerCase() === keyLower);
+          if (byCode3) { foundLang = byCode3; break; }
+        }
+
+        if (foundLang) {
+          setTargetLanguage(foundLang);
+          setIsDetected(true);
+        } else {
+          // If country languages did not yield a non-English supported language, fallback to Urdu
+          if (urduLang) {
+            setTargetLanguage(urduLang);
+            setIsDetected(false);
+          }
+        }
+      } catch (e) {
+        console.warn('country-based detection failed', e);
+        if (urduLang) {
+          setTargetLanguage(urduLang);
+          setIsDetected(false);
+        }
+      } finally {
+        autoDetectDone.current = true;
+      }
+    })();
+  }, [country, isBrowser, urlHasTgt, urduLang]);
+  // ---------- END AUTO-DETECT LOGIC ----------
+
   // Snackbar helper (read-only)
   const showReadOnlySnack = () => {
     setSnackOpen(true);
@@ -417,6 +635,23 @@ if data_el is not None:
     }
   };
 
+  // UI change handlers (ensure manual selection blocks further auto-detects)
+  const handleSourceSelect = (e) => {
+    const found = languages.find(l => l.id === e.target.value);
+    if (found) setSourceLanguage(found);
+  };
+
+  const handleTargetSelect = (e) => {
+    const found = languages.find(l => l.id === e.target.value);
+    if (found) {
+      setTargetLanguage(found);
+      // mark that the user manually changed the target language — Option A
+      markUserManualTarget();
+      // clear detected flag because user explicitly chose
+      setIsDetected(false);
+    }
+  };
+
   return (
     <Layout title={`${siteConfig.title} | Programming for everyone`} description="Write Python in any human language. Can't find yours? Easily contribute.">
       <Head>
@@ -458,7 +693,7 @@ if data_el is not None:
               {/* Left editor container (position: relative for floating button) */}
               <div style={{ flex: 1, position: 'relative' }}>
                 <Box width="250px">
-                  <TextField label="From" fullWidth select onChange={(e) => { const found = languages.find(l => l.id === e.target.value); if (found) { setSourceLanguage(found); setIsDetected(false); } }} value={sourceLanguage?.id}>
+                  <TextField label="From" fullWidth select onChange={handleSourceSelect} value={sourceLanguage?.id}>
                     {languages.map((l) => <MenuItem key={l.id} value={l.id}>{l.name}</MenuItem>)}
                   </TextField>
                 </Box>
@@ -481,14 +716,16 @@ if data_el is not None:
                   </IconButton>
                 </Tooltip>
 
-                <IDE id="python-code-editor1" value={editorCode} mode="python" onChange={(text) => { setEditorCode(text); }} height={'240px'} style={{ margin: 12, fontFamily: sourceLanguage?.fontFamily }} />
+              <div style={{ position: 'relative', direction: sourceLanguage?.direction || 'ltr' }} direction={sourceLanguage?.direction || 'ltr'}>
+                <IDE id="python-code-editor1" value={editorCode} mode="python" onChange={(text) => { setEditorCode(text); }} height={'240px'} style={{ borderRadius: '0.4rem', overflow: 'hidden', margin: 12, fontFamily: sourceLanguage?.fontFamily }} />
+              </div>
               </div>
 
               <Button sx={{ height: 'fit-content', width: { xs: '100%', md: '5%' }, m: { xs: '10px 0', md: 0 } }} onClick={swapLanguages}>&#8644;</Button>
 
               <div style={{ flex: 1, marginLeft: 12, position: 'relative' }}>
                 <Box display="flex" alignItems="center" justifyContent="space-between">
-                  <TextField select label="To" fullWidth onChange={(e) => { const found = languages.find(l => l.id === e.target.value); if (found) setTargetLanguage(found); }} value={targetLanguage?.id} sx={{ maxWidth: 250 }}>
+                  <TextField select label="To" fullWidth onChange={handleTargetSelect} value={targetLanguage?.id} sx={{ maxWidth: 250 }}>
                     {languages.map((l) => <MenuItem key={l.id} value={l.id}>{l.name}{targetLanguage?.id === l.id ? isDetected ? ' - detected' : '' : ''}</MenuItem>)}
                   </TextField>
                 </Box>
@@ -512,8 +749,8 @@ if data_el is not None:
                 </Tooltip>
 
                 {/* Right-hand editor: real CodeMirror, readOnly. We render an overlay to catch interactions and show snackbar */}
-                <div style={{ position: 'relative' }}>
-                  <IDE id="python-code-editor2" mode="python" height={'240px'} readOnly={true} value={translatedCode} basicSetup={{ direction: targetLanguage?.direction || 'ltr' }} style={{ margin: 12, whiteSpace: 'pre', fontFamily: targetLanguage?.fontFamily }} handleReadOnlyTyping={showReadOnlySnack} />
+                <div style={{ position: 'relative', direction: targetLanguage?.direction || 'ltr' }} direction={targetLanguage?.direction || 'ltr'}>
+                  <IDE id="python-code-editor2" mode="python" height={'240px'} readOnly={true} value={translatedCode} basicSetup={{ direction: targetLanguage?.direction || 'ltr' }} style={{ borderRadius: '0.4rem', overflow: 'hidden', margin: 12, whiteSpace: 'pre', fontFamily: targetLanguage?.fontFamily }} handleReadOnlyTyping={showReadOnlySnack} />
 
                   {/* transparent overlay to block interactions and show tooltip/snackbar on attempt */}
                   <div
@@ -578,6 +815,8 @@ if data_el is not None:
     </Layout>
   );
 }
+
+
 
 const MaterialThemeWrapper = ({ children }) => {
   const { colorMode } = useColorMode(); const isDarkTheme = colorMode === 'dark';
