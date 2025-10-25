@@ -45,6 +45,15 @@ const languages = [
     toEnglishDict: "'languages/de/default.yaml'",
   },
   {
+    id: "NL",
+    code3: "nld",
+    code2: "nl",
+    name: "Dutch",
+    i18nName: "Nederlands",
+    fontFamily: "'Roboto Mono'",
+    toEnglishDict: "'languages/nl/default.yaml'",
+  },
+  {
     id: "UR",
     code3: "urd",
     code2: "ur",
@@ -135,6 +144,7 @@ const languages = [
     }
   },
 ]
+
 
 const initialCodes = [
   { id: 'hello_world', name: ' Simple Hello World', en: `print("Hello world!")` },
